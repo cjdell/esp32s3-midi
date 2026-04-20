@@ -4,16 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-esp-hal = { version = "1.1.0-rc.0", features = [
-    "esp32s3",
-    "unstable",
-    "defmt",
-] }
-esp-backtrace = { version = "0.19.0", features = [
-    "esp32s3",
-    "panic-handler",
-    "defmt",
-] }
+esp-hal = { version = "1.1.0-rc.0", features = ["esp32s3", "unstable"] }
+esp-backtrace = { version = "0.19.0", features = ["esp32s3", "panic-handler", "println"] }
 esp-println = { version = "0.17.0", features = [
     "esp32s3",
     "defmt-espflash",
@@ -21,7 +13,7 @@ esp-println = { version = "0.17.0", features = [
 ] }
 esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32s3"] }
 usb-device = { version = "0.3.2", features = ["control-buffer-256"] }
-midi-convert = { version = "0.2.0", features = ["defmt"] }
+midi-convert = { version = "0.2.0", features = [] }
 heapless = "0.9.1"
 usbd-midi = "0.5.1"
 embassy-executor = "0.10.0"
@@ -30,6 +22,12 @@ embassy-usb = "0.6.0"
 esp-rtos = { version = "0.3.0", features = ["esp32s3", "esp-alloc", "embassy"] }
 defmt = "1.0.1"
 esp-alloc = { version = "0.10.0", features = ["esp32s3"] }
+embassy-time = "0.5.1"
+embassy-usb-logger = "0.6.0"
+log = "0.4.29"
+static_cell = "2.1.1"
+portable-atomic = "1.13.1"
+embassy-sync = "0.8.0"
 
 [profile.release]
 codegen-units = 1        # LLVM can perform better optimizations using a single thread
