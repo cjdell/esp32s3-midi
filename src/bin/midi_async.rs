@@ -11,7 +11,7 @@
 //! - DM (USB D-) => GPIO19
 //! - Button => GPIO0 (pull-up)
 //!
-//! Build in release mode: `cargo esp flash --release`
+//! Build in release mode: `cargo run -r --bin midi_async`
 
 #![no_std]
 #![no_main]
@@ -32,13 +32,13 @@ use embassy_usb::{
 use embassy_usb_logger::{ReceiverHandler, UsbLogger};
 use esp_backtrace as _;
 use esp_hal::{
-    gpio::{Input, InputConfig, Pull},
+    gpio::{AnyPin, Input, InputConfig, Pull},
     interrupt::software::SoftwareInterruptControl,
     otg_fs::{
         asynch::{Config, Driver},
         Usb,
     },
-    peripherals::Peripherals,
+    peripherals::GPIO0,
     timer::timg::TimerGroup,
 };
 use midi_convert::{
@@ -96,12 +96,12 @@ impl From<EndpointError> for Disconnected {
 
 // --- Main MIDI Task ---
 /// Continuously waits for button press and sends MIDI Note On/Off.
-async fn midi_task<'a>(midi_class: &mut MidiClass<'a, Driver<'a>>) -> Result<(), Disconnected> {
-    // Borrow peripherals for button
-    let p = unsafe { Peripherals::steal() };
-
+async fn midi_task<'a>(
+    midi_class: &mut MidiClass<'a, Driver<'a>>,
+    button: AnyPin<'a>,
+) -> Result<(), Disconnected> {
     // Configure button on GPIO0 with pull-up
-    let mut button = Input::new(p.GPIO0, InputConfig::default().with_pull(Pull::Up));
+    let mut button = Input::new(button, InputConfig::default().with_pull(Pull::Up));
 
     log::info!("MIDI task started. Waiting for button...");
 
@@ -223,10 +223,14 @@ async fn main(spawner: Spawner) {
         loop {
             midi_class.wait_connection().await;
             log::info!("MIDI device connected.");
-            match midi_task(&mut midi_class).await {
+
+            let button = unsafe { peripherals.GPIO0.clone_unchecked() };
+
+            match midi_task(&mut midi_class, button.into()).await {
                 Ok(()) => log::info!("MIDI task ended gracefully."),
                 Err(_) => log::warn!("MIDI connection lost."),
             }
+
             log::info!("MIDI device disconnected.");
         }
     };
