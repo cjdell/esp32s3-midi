@@ -51,7 +51,6 @@ use usbd_midi::{CableNumber, UsbMidiEventPacket};
 esp_bootloader_esp_idf::esp_app_desc!();
 
 // --- MIDI Constants ---
-const MIDI_NOTE: Note = Note::C3;
 const MIDI_CHANNEL: Channel = Channel::C1;
 const MIDI_VELOCITY_ON: u8 = 100;
 const MIDI_VELOCITY_OFF: u8 = 0;
@@ -112,27 +111,28 @@ async fn midi_task<'a>(midi_class: &mut MidiClass<'a, Driver<'a>>) -> Result<(),
         log::info!("Button pressed → Note On");
 
         // Send Note On
-        send_midi_note(midi_class, true).await?;
+        send_midi_note(midi_class, Note::C3, true).await?;
 
         // Wait for release (high = released)
         button.wait_for_high().await;
         log::info!("Button released → Note Off");
 
         // Send Note Off
-        send_midi_note(midi_class, false).await?;
+        send_midi_note(midi_class, Note::C3, false).await?;
     }
 }
 
 /// Send a MIDI Note On/Off message using the USB MIDI class.
 async fn send_midi_note<'a>(
     midi_class: &mut MidiClass<'a, Driver<'a>>,
+    node: Note,
     is_on: bool,
 ) -> Result<(), Disconnected> {
     // Construct MIDI message
     let message = if is_on {
-        MidiMessage::NoteOn(MIDI_CHANNEL, MIDI_NOTE, Value7::from(MIDI_VELOCITY_ON))
+        MidiMessage::NoteOn(MIDI_CHANNEL, node, Value7::from(MIDI_VELOCITY_ON))
     } else {
-        MidiMessage::NoteOff(MIDI_CHANNEL, MIDI_NOTE, Value7::from(MIDI_VELOCITY_OFF))
+        MidiMessage::NoteOff(MIDI_CHANNEL, node, Value7::from(MIDI_VELOCITY_OFF))
     };
 
     // Render MIDI message into 3-byte payload
