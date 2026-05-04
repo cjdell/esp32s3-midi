@@ -2,6 +2,8 @@
 
 #![no_std]
 #![no_main]
+#![feature(asm_experimental_arch, allocator_api, impl_trait_in_assoc_type)]
+#![recursion_limit = "256"]
 
 use core::ptr::addr_of_mut;
 use esp_backtrace as _;
@@ -88,20 +90,15 @@ fn main() -> ! {
 
                                     // Process the SysEx message as request in a separate function
                                     // and send an optional response back to the host.
-                                    if let Some(response) =
-                                        process_sysex(sysex_receive_buffer.as_ref())
-                                    {
+                                    if let Some(response) = process_sysex(sysex_receive_buffer.as_ref()) {
                                         for chunk in response.chunks(3) {
-                                            let packet = UsbMidiEventPacket::try_from_payload_bytes(
-                                                CableNumber::Cable0,
-                                                chunk,
-                                            );
+                                            let packet =
+                                                UsbMidiEventPacket::try_from_payload_bytes(CableNumber::Cable0, chunk);
                                             match packet {
                                                 Ok(packet) => loop {
                                                     // Make sure to add some timeout in case the host
                                                     // does not read the data.
-                                                    let result =
-                                                        midi_class.send_packet(packet.clone());
+                                                    let result = midi_class.send_packet(packet.clone());
                                                     match result {
                                                         Ok(_) => break,
                                                         Err(err) => {
@@ -111,10 +108,7 @@ fn main() -> ! {
                                                         }
                                                     }
                                                 },
-                                                Err(err) => println!(
-                                                    "SysEx response packet error: {:?}",
-                                                    err
-                                                ),
+                                                Err(err) => println!("SysEx response packet error: {:?}", err),
                                             }
                                         }
                                     }
@@ -146,8 +140,7 @@ fn main() -> ! {
 
             message.render_slice(&mut bytes);
 
-            let packet =
-                UsbMidiEventPacket::try_from_payload_bytes(CableNumber::Cable0, &bytes).unwrap();
+            let packet = UsbMidiEventPacket::try_from_payload_bytes(CableNumber::Cable0, &bytes).unwrap();
 
             // Try to send the packet.
             // An `UsbError::WouldBlock` is returned if the host has not read previous data.

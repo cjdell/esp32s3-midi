@@ -1,5 +1,9 @@
 {
     "rust-analyzer.cargo.allTargets": false,
     "rust-analyzer.cargo.target": "xtensa-esp32s3-none-elf",
-    "editor.formatOnSave": true
+    "rust-analyzer.lens.enable": false,
+    "rust-analyzer.inlayHints.typeHints.enable": false,
+    "rust-analyzer.inlayHints.chainingHints.enable": false,
+    "rust-analyzer.inlayHints.parameterHints.enable": false,
+    "editor.formatOnSave": true,
 }
