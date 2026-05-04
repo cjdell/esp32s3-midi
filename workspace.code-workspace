@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "firmware"
+		},
+		{
+			"path": "keyboard-web"
+		}
+	],
+	"settings": {
+		"rust-analyzer.cargo.allTargets": false,
+		"rust-analyzer.lens.enable": false,
+		"rust-analyzer.inlayHints.typeHints.enable": false,
+		"rust-analyzer.inlayHints.chainingHints.enable": false,
+		"rust-analyzer.inlayHints.parameterHints.enable": false,
+		"editor.formatOnSave": true,
+	}
+}

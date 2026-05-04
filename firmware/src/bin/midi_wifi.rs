@@ -20,11 +20,15 @@
 
 extern crate alloc;
 
+use core::{net::Ipv4Addr, str::FromStr};
 use embassy_executor::Spawner;
-use embassy_futures::join::join3;
+use embassy_futures::join::join4;
+use embassy_futures::{join::join3, select::select};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_usb::class::*;
 use embassy_usb_logger::{ReceiverHandler, UsbLogger};
-use esp32s3_midi::*;
+use firmware::*;
+use firmware::{types::*, utils::*};
 use esp_backtrace as _;
 use esp_hal::{
     gpio::{AnyPin, Input, InputConfig, Pull},
@@ -56,26 +60,50 @@ const USB_MAX_PACKET_SIZE: u16 = 64;
 async fn midi_task<'a>(
     midi_class: &mut midi::MidiClass<'a, otg_fs::asynch::Driver<'a>>,
     button: AnyPin<'a>,
+    web_socket_incoming_receiver: WebSocketIncomingReceiver,
 ) -> Result<(), Disconnected> {
+    let midi_mutex = Mutex::<CriticalSectionRawMutex, _>::new(midi_class);
+
     // Configure button on GPIO0 with pull-up
     let mut button = Input::new(button, InputConfig::default().with_pull(Pull::Up));
 
     log::info!("MIDI task started. Waiting for button...");
 
     loop {
-        // Wait for button press (low = pressed)
-        button.wait_for_low().await;
-        log::info!("Button pressed → Note On");
+        either_into_result::<_, Disconnected>(
+            select(
+                // Button task
+                async {
+                    button.wait_for_low().await;
+                    log::info!("Button pressed → Note On");
+                    send_midi_note(*midi_mutex.lock().await, Note::C3, true).await?;
 
-        // Send Note On
-        send_midi_note(midi_class, Note::C3, true).await?;
+                    button.wait_for_high().await;
+                    log::info!("Button released → Note Off");
+                    send_midi_note(*midi_mutex.lock().await, Note::C3, false).await?;
 
-        // Wait for release (high = released)
-        button.wait_for_high().await;
-        log::info!("Button released → Note Off");
+                    Ok(())
+                },
+                // WebSocket task
+                async {
+                    match web_socket_incoming_receiver.receive().await {
+                        WebSocketIncomingMessage::NoteOn(n) => {
+                            send_midi_note(*midi_mutex.lock().await, Note::new(n), true).await?;
+                        }
+                        WebSocketIncomingMessage::NoteOff(n) => {
+                            send_midi_note(*midi_mutex.lock().await, Note::new(n), false).await?;
+                        }
+                    }
 
-        // Send Note Off
-        send_midi_note(midi_class, Note::C3, false).await?;
+                    // send_midi_note(*midi_mutex.lock().await, Note::C4, true).await?;
+
+                    // utils::sleep(1_000).await;
+
+                    Ok(())
+                },
+            )
+            .await,
+        )?;
     }
 }
 
@@ -115,11 +143,15 @@ async fn main(spawner: Spawner) {
 
     // Allocate heap memory for dynamic allocations
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 72 * 1024);
+    esp_alloc::heap_allocator!(size: 128 * 1024);
+    esp_alloc::psram_allocator!(peripherals.PSRAM, esp_hal::psram);
 
     // Initialize timer and software interrupt for RTOS
     let sw_int = SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
     let timg0 = TimerGroup::new(peripherals.TIMG0);
     esp_rtos::start(timg0.timer0, sw_int.software_interrupt0);
+
+    let web_socket_incoming_channel = make_static!(WebSocketIncomingChannel, WebSocketIncomingChannel::new());
 
     // Initialize USB hardware
     let usb = otg_fs::Usb::new(
@@ -183,7 +215,7 @@ async fn main(spawner: Spawner) {
 
             let button = unsafe { peripherals.GPIO0.clone_unchecked() };
 
-            match midi_task(&mut midi_class, button.into()).await {
+            match midi_task(&mut midi_class, button.into(), web_socket_incoming_channel.receiver()).await {
                 Ok(()) => log::info!("MIDI task ended gracefully."),
                 Err(_) => log::warn!("MIDI connection lost."),
             }
@@ -212,6 +244,34 @@ async fn main(spawner: Spawner) {
         logger.create_future_from_class(cdc_class).await; // Never returns
     };
 
+    let wifi_fut = async {
+        sleep(2_000).await;
+
+        log::info!("Starting...");
+
+        let rng = esp_hal::rng::Rng::new();
+        let seed = (rng.random() as u64) << 32 | rng.random() as u64;
+
+        let (controller, interfaces) = esp_radio::wifi::new(peripherals.WIFI, Default::default()).unwrap();
+
+        // Init network stack
+        let (stack, runner) = embassy_net::new(
+            interfaces.access_point,
+            embassy_net::Config::dhcpv4(Default::default()),
+            make_static!(embassy_net::StackResources<8>, embassy_net::StackResources::<8>::new()),
+            seed,
+        );
+
+        let ap_ip = Ipv4Addr::from_str("192.168.1.1").expect("Failed to parse AP IP!");
+
+        spawner.spawn(wifi::connection_task(controller, stack, ap_ip).unwrap());
+        spawner.spawn(wifi::net_task(runner).unwrap());
+        spawner.spawn(wifi::dhcp_task(stack, ap_ip).unwrap());
+        spawner.spawn(wifi::captive_task(stack, ap_ip).unwrap());
+
+        http::start_http(spawner, stack, web_socket_incoming_channel.sender());
+    };
+
     // Run all tasks concurrently
-    join3(usb_fut, midi_fut, logger_fut).await;
+    join4(usb_fut, midi_fut, logger_fut, wifi_fut).await;
 }

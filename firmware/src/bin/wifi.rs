@@ -27,8 +27,8 @@ use embassy_futures::{join::join3, select::select};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_usb::class::*;
 use embassy_usb_logger::{ReceiverHandler, UsbLogger};
-use esp32s3_midi::*;
-use esp32s3_midi::{types::*, utils::*};
+use firmware::*;
+use firmware::{types::*, utils::*};
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
 use esp_hal::{
