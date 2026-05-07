@@ -23,12 +23,10 @@ extern crate alloc;
 use core::{net::Ipv4Addr, str::FromStr};
 use embassy_executor::Spawner;
 use embassy_futures::join::join4;
-use embassy_futures::{join::join3, select::select};
+use embassy_futures::select::select;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_usb::class::*;
 use embassy_usb_logger::{ReceiverHandler, UsbLogger};
-use firmware::*;
-use firmware::{types::*, utils::*};
 use esp_backtrace as _;
 use esp_hal::{
     gpio::{AnyPin, Input, InputConfig, Pull},
@@ -36,6 +34,8 @@ use esp_hal::{
     otg_fs,
     timer::timg::TimerGroup,
 };
+use firmware::*;
+use firmware::{types::*, utils::*};
 use midi_convert::{
     midi_types::{Channel, MidiMessage, Note, Value7},
     render_slice::MidiRenderSlice,
@@ -143,8 +143,8 @@ async fn main(spawner: Spawner) {
 
     // Allocate heap memory for dynamic allocations
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 72 * 1024);
-    esp_alloc::heap_allocator!(size: 128 * 1024);
-    esp_alloc::psram_allocator!(peripherals.PSRAM, esp_hal::psram);
+    esp_alloc::heap_allocator!(size: 160 * 1024);
+    // esp_alloc::psram_allocator!(peripherals.PSRAM, esp_hal::psram);
 
     // Initialize timer and software interrupt for RTOS
     let sw_int = SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);

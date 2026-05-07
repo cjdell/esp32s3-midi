@@ -2,7 +2,7 @@
 
 > Send MIDI Note On/Off events via USB from your ESP32-S3 using async Rust and Embassy. Use buttons, GPIO, WiFi etc.
 
-This example demonstrates how to build a **USB MIDI device** on the ESP32-S3 using **async Embassy**, with **serial logging** via CDC-ACM and **button-triggered** and **WiFi** trigger **MIDI notes**. Press the onboard **BOOT button** to send a MIDI note (C3) to any host device like GarageBand, Ableton, or DAWs. Connect to WiFi network `ESP32 MIDI` to get a MIDI keyboard interface which sends notes via WebSocket.
+This example demonstrates how to build a **USB MIDI device** on the ESP32-S3 using **async Embassy**, with **serial logging** via CDC-ACM and **button-triggered** and **WiFi** triggered **MIDI notes**. Press the onboard **BOOT button** to send a MIDI note (C3) to any host device like GarageBand, Ableton, or DAWs. Connect to WiFi network `ESP32 MIDI` to get a MIDI keyboard **web interface** which sends notes via **WebSocket**.
 
 ---
 
@@ -22,7 +22,6 @@ This example demonstrates how to build a **USB MIDI device** on the ESP32-S3 usi
 ## 📁 Project Structure
 
 ```bash
-.
 `midi.rs`               # 🚫 Legacy: Blocking (non-async) version for comparison
 `midi_async.rs`         # ✅ Better: Async Embassy version (this example)
 `midi_wifi.rs`          # 🛜 Advanced: Host a WiFi Access Point and presents a web app via captive portal. Demostrates WebSocket communication

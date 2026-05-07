@@ -1,6 +1,6 @@
 use crate::{types::*, utils::*};
 use alloc::vec::Vec;
-use esp_alloc::ExternalMemory;
+use esp_alloc::InternalMemory;
 use picoserve::{
     futures::Either,
     response::ws::{Message, SocketRx, SocketTx, WebSocketCallback},
@@ -28,7 +28,7 @@ impl WebSocketCallback for WebSocketHandler {
 
         log::info!("WebSocket opened");
 
-        let mut message_buffer = Vec::new_in(ExternalMemory);
+        let mut message_buffer = Vec::new_in(InternalMemory);
         message_buffer.resize(4096, 0u8);
 
         let close_reason = loop {

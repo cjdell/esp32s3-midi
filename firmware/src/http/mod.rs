@@ -8,7 +8,7 @@ use alloc::{boxed::Box, vec::Vec};
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::Duration;
-use esp_alloc::ExternalMemory;
+use esp_alloc::InternalMemory;
 use log::info;
 use picoserve::{
     make_static,
@@ -80,11 +80,11 @@ async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppP
 
     let port = 80;
 
-    let mut tcp_rx_buffer = Vec::new_in(ExternalMemory);
+    let mut tcp_rx_buffer = Vec::new_in(InternalMemory);
     tcp_rx_buffer.resize(8 * 1024, 0);
-    let mut tcp_tx_buffer = Vec::new_in(ExternalMemory);
+    let mut tcp_tx_buffer = Vec::new_in(InternalMemory);
     tcp_tx_buffer.resize(8 * 1024, 0);
-    let mut http_buffer = Vec::new_in(ExternalMemory);
+    let mut http_buffer = Vec::new_in(InternalMemory);
     http_buffer.resize(8 * 1024, 0);
 
     Box::new_in(
@@ -97,7 +97,7 @@ async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppP
                 tcp_tx_buffer.as_mut_slice(),
             )
             .await,
-        ExternalMemory,
+        InternalMemory,
     )
     .into_never()
 }
