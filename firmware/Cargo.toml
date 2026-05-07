@@ -1,5 +1,5 @@
 [package]
-name = "esp32s3-midi"
+name = "firmware"
 version = "0.1.0"
 edition = "2021"
 

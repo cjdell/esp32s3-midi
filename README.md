@@ -1,8 +1,8 @@
 # 🎹 MIDI over USB on ESP32-S3 with Embassy (Async Rust)
 
-> Send MIDI Note On/Off events via USB from your ESP32-S3 using async Rust and Embassy — no OS required.
+> Send MIDI Note On/Off events via USB from your ESP32-S3 using async Rust and Embassy. Use buttons, GPIO, WiFi etc.
 
-This example demonstrates how to build a **USB MIDI device** on the ESP32-S3 using **async Embassy**, with **serial logging** via CDC-ACM and **button-triggered MIDI notes**. Press the onboard **BOOT button** to send a MIDI note (C3) to any host device like GarageBand, Ableton, or DAWs.
+This example demonstrates how to build a **USB MIDI device** on the ESP32-S3 using **async Embassy**, with **serial logging** via CDC-ACM and **button-triggered** and **WiFi** trigger **MIDI notes**. Press the onboard **BOOT button** to send a MIDI note (C3) to any host device like GarageBand, Ableton, or DAWs. Connect to WiFi network `ESP32 MIDI` to get a MIDI keyboard interface which sends notes via WebSocket.
 
 ---
 
@@ -13,6 +13,7 @@ This example demonstrates how to build a **USB MIDI device** on the ESP32-S3 usi
 | 🎵 **USB MIDI Device** | Sends `Note On` and `Note Off` messages over USB MIDI (Cable 0) |
 | 🔌 **CDC-ACM Serial Logging** | Real-time logs via USB serial port (`log!` macros) |
 | 🎛️ **Button Triggered** | Uses the ESP32-S3’s built-in `BOOT` button (GPIO0) |
+| 🛜 **WiFi Web App** | Connect your phone to open a web app and send MIDI notes |
 | ⚡ **Async-First** | Clean, readable async code with `await` — no busy loops or RTOS tasks |
 | 📦 **No External Libraries** | Uses only `embassy`, `esp-hal`, and `midi-convert` |
 
@@ -22,13 +23,10 @@ This example demonstrates how to build a **USB MIDI device** on the ESP32-S3 usi
 
 ```bash
 .
-├── midi_async.rs        # ✅ Recommended: Async Embassy version (this example)
-├── midi.rs              # 🚫 Legacy: Blocking (non-async) version for comparison
-├── README.md            # You're here!
-└── Cargo.toml           # Dependencies and build config
+`midi.rs`               # 🚫 Legacy: Blocking (non-async) version for comparison
+`midi_async.rs`         # ✅ Better: Async Embassy version (this example)
+`midi_wifi.rs`          # 🛜 Advanced: Host a WiFi Access Point and presents a web app via captive portal. Demostrates WebSocket communication
 ```
-
-> 💡 **Use `midi_async.rs`** — it’s modern, efficient, and scales beautifully.
 
 ---
 
@@ -62,35 +60,29 @@ Make sure you have the right tools installed:
 ```bash
 # Install Rust toolchain and ESP tooling
 sudo apt update && sudo apt install -y rustup tio
+# On macOS
+brew install rustup tio
 
 rustup install stable
 cargo install espup
 
-# Install ESP-IDF toolchain + Rust tooling
+# Install ESP32 toolchain
 espup install
 ```
 
-> 💡 If you haven't already, set up your environment variables by sourcing the ESP profile:
-```bash
-source ~/export-esp.sh
-```
-
-> 🔧 **Pro Tip**: Add this line to your `~/.bashrc` or `~/.zshrc` to auto-load it:
-> ```bash
-> source ~/export-esp.sh
-> ```
-
 ---
 
-## ▶️ Running the Example
+## ▶️ Running the Examples
+
+>   ⚠️ **NOTE** - You will need to hold down the BOOT button whilst plugin in the ESP32 (or whilst pressing reset). This is due to the loss of the default debugging interface - a necessary sacrifice needed to bring up the Embassy USB stack.
+
+Build and flash in release mode:
 
 ```bash
-# Build and flash in release mode (required for USB performance!)
-cargo run --release --bin midi_async
+cd firmware
 
-# Or if you prefer to flash manually:
-cargo build --release --bin midi_async
-espflash --port /dev/ttyUSB0 target/esp32s3-esp-elf/release/midi_async.bin
+./run-midi.sh   # Example using BOOT button
+./run-wifi.sh   # WiFi example (advanced)
 ```
 
 ### 🔌 Connect & Test
@@ -104,12 +96,26 @@ espflash --port /dev/ttyUSB0 target/esp32s3-esp-elf/release/midi_async.bin
 
 > ✅ You should see **MIDI events** appear when you press the **BOOT button** (labeled `BOOT` or `GPIO0` on your board).
 
+#### For the WiFi example:
+
+1. Connect your phone to the WiFi network `ESP32 MIDI`.
+2. App should appear. If not, open `192.168.1.1` on your phones web browser.
+3. Press keys to send MIDI notes.
+
+![Mobile Web Interface](images/web.png)
+
 ### 📜 View Serial Logs (Debugging)
 
 The device also creates a **virtual serial port (CDC-ACM)** for logs.
 
 ```bash
 tio /dev/ttyUSB0
+```
+
+On macOS, use:
+
+```bash
+tio /dev/cu.usbmodem123456783
 ```
 
 > ⚠️ If `/dev/ttyUSB0` doesn’t work, try `ttyUSB1`, `ttyACM0`, or use:
@@ -119,10 +125,14 @@ tio /dev/ttyUSB0
 
 Logs will show:
 ```
-[INFO] MIDI device connected.
-[INFO] Button pressed → Note On
-[DEBUG] MIDI sent: UsbMidiEventPacket { ... }
-[INFO] Button released → Note Off
+Wifi: Hello [70, 101, 32, 53, 76, 106]
+Upgrade WebSocket connection...
+WebSocket opened
+Message: Text("{\"NoteOn\":64}")
+Message: Text("{\"NoteOff\":64}")
+Message: Text("{\"NoteOff\":64}")
+Message: Text("{\"NoteOn\":65}")
+Message: Text("{\"NoteOn\":65}")
 ```
 
 > 💡 To **restart the device**, type `r` + Enter in the serial terminal!
@@ -140,4 +150,13 @@ Logs will show:
 | **`usbd-midi`** | Wraps MIDI data into USB MIDI event packets (4-byte format). |
 | **`embassy`** | Async USB stack — handles all USB protocol details for you. |
 
-> 🔍 **No driver needed on host** — it’s a standard USB MIDI device!
+### WiFi example
+
+This works by abusing the captive portal function of your device, usually used to get you to pay for internet access (i.e. in a hotel or airport). This allows the app to be presented immediately upon connecting the WiFi network.
+
+WiFi example also demostrates:
+
+- Access Point mode
+- DHCP Server
+- WebSocket server
+- Embassy channels for internal communication

@@ -52,7 +52,7 @@ impl AppBuilder for AppProps {
                             info!("Upgrade WebSocket connection...");
                             upgrade
                                 .on_upgrade(WebSocketHandler::new(self.web_socket_incoming_sender))
-                                .with_protocol("messages")
+                                .with_protocol("json")
                         })
                         .options(async || cors_options_response()),
                     ),

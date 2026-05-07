@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "dev": "deno run -A --watch src/dummy_server.ts"
+  },
+  "imports": {}
+}
