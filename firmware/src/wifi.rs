@@ -16,7 +16,7 @@ use log::{error, info, warn};
 pub async fn connection_task(mut controller: WifiController<'static>, stack: Stack<'static>, ap_ip_address: Ipv4Addr) {
     info!("Wifi: Task started");
 
-    let ap_ssid = "ESP Thingy";
+    let ap_ssid = "ESP32 MIDI";
 
     let config = AccessPointConfig::default().with_ssid(ap_ssid);
 
@@ -47,15 +47,15 @@ pub async fn connection_task(mut controller: WifiController<'static>, stack: Sta
             match subscriber.next_event_pure().await {
                 EventInfo::AccessPointStationConnected {
                     mac,
-                    aid,
-                    is_mesh_child,
+                    aid: _,
+                    is_mesh_child: _,
                 } => {
                     info!("Wifi: Hello {mac:?}");
                 }
                 EventInfo::AccessPointStationDisconnected {
                     mac,
-                    aid,
-                    is_mesh_child,
+                    aid: _,
+                    is_mesh_child: _,
                     reason,
                 } => {
                     info!("Wifi: Goodbye {mac:?}, Reason: {reason}");

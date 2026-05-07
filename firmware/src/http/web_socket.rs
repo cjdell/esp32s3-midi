@@ -26,7 +26,7 @@ impl WebSocketCallback for WebSocketHandler {
     ) -> Result<(), W::Error> {
         use Message;
 
-        log::info!("WebSocket closed");
+        log::info!("WebSocket opened");
 
         let mut message_buffer = Vec::new_in(ExternalMemory);
         message_buffer.resize(4096, 0u8);

@@ -165,6 +165,9 @@
     <div class="connection-status" id="connectionStatus">Disconnected</div>
 
     <script>
+      // const WS_URL = "ws://192.168.1.1/api/ws";  // For testing remotely
+      const WS_URL = "/api/ws";
+
       const octaveDisplay = document.getElementById("octave");
       const octaveDownBtn = document.getElementById("octaveDownBtn");
       const octaveUpBtn = document.getElementById("octaveUpBtn");
@@ -241,18 +244,7 @@
         }
       }
 
-      octaveDownBtn.addEventListener("click", () => {
-        if (octave == 0) return;
-        octave--;
-        octaveDisplay.querySelector("span").textContent = `Octave ${octave}`;
-      });
-
-      octaveUpBtn.addEventListener("click", () => {
-        octave++;
-        octaveDisplay.querySelector("span").textContent = `Octave ${octave}`;
-      });
-
-      connectBtn.addEventListener("click", () => {
+      function toggleConnection() {
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.close();
           connectBtn.textContent = "Connect to Web Socket";
@@ -261,9 +253,7 @@
           return;
         }
 
-        const wsUrl = "ws://192.168.1.1/api/ws";
-
-        socket = new WebSocket(wsUrl, ["messages", "ignored_protocol"]);
+        socket = new WebSocket(WS_URL, ["json"]);
 
         socket.onopen = () => {
           connectBtn.textContent = "Disconnect";
@@ -283,19 +273,33 @@
           socket = null;
         };
 
-        socket.onerror = (error) => {
-          statusDisplay.textContent = `WebSocket error: ${error.message}`;
+        socket.onerror = () => {
+          console.log(event);
+          statusDisplay.textContent = "WebSocket error";
           connectionStatus.textContent = "Connection failed";
           connectionStatus.style.color = "#ff4444";
           connectBtn.textContent = "Connect to Web Socket";
         };
+      }
+
+      octaveDownBtn.addEventListener("click", () => {
+        if (octave == 0) return;
+        octave--;
+        octaveDisplay.querySelector("span").textContent = `Octave ${octave}`;
       });
+
+      octaveUpBtn.addEventListener("click", () => {
+        octave++;
+        octaveDisplay.querySelector("span").textContent = `Octave ${octave}`;
+      });
+
+      connectBtn.addEventListener("click", toggleConnection);
+
+      window.addEventListener("load", toggleConnection);
 
       // Show instructions on first load
       if (!localStorage.getItem("midiKeyboardTutorialShown")) {
-        alert(
-          "Tap keys to send MIDI NoteOn/NoteOff events over WebSocket. Click Connect to simulate connection.",
-        );
+        alert("Tap keys to send MIDI NoteOn/NoteOff events over WebSocket");
         localStorage.setItem("midiKeyboardTutorialShown", "true");
       }
     </script>
